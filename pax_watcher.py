@@ -9,13 +9,16 @@ from boto3.session import Session
 import sys
 
 # vars
-pax_site = 'http://prime.paxsite.com/registration'
-s3_bucket = ''
-old_div_loc = ''
+SITE = 'http://prime.paxsite.com/registration'
+S3_BUCKET = ''
+OLD_DIV_LOC = 'key prefix in your bucket'
 AWS_ACCESS_KEY = ''
 AWS_SECRET_KEY = ''
-REGION_NAME = 'us-west-2'
-TOPIC_ARN = ''
+REGION_NAME = ''
+TOPIC_ARN = 'SNS topicARN'
+HTML_ID = 'badgeAvailability'
+SNS_MESSAGE = 'type your custom message here'
+SNS_SUBJECT = 'type your custom subject here'
 
 def my_handler(event, context):
     # boto3 connection
@@ -29,40 +32,40 @@ def my_handler(event, context):
 
         # s3 get old_div and store as string
         response = s3.get_object(Bucket=s3_bucket,
-        Key=old_div_loc)
-        
-        old_div = response['Body'].read()
+        Key=OLD_LOC)
 
-        return old_div
+        OLD_DIV = response['Body'].read()
 
-    def pax_live():
+        return OLD_DIV
+
+    def live_site():
         # response from live site
-        response_live = requests.get(pax_site)
+        response_live = requests.get(SITE)
 
         # gather pax registration page
         soup = BeautifulSoup(response_live.text, "html.parser")
 
         # parse for interesting div
-        new_div = soup.find(id='badgeAvailability').encode('utf-8')
+        NEW_DIV = soup.find(id=HTML_ID).encode('utf-8')
 
-        return new_div
+        return NEW_DIV
 
     def sns_alert():
         # establish a connection to sns client
         sns = session.client('sns')
 
         # push a message if it has been changed
-        publish_sns = sns.publish(TopicArn=TOPIC_ARN,
-            Message='This automated message has been sent in response to Taylor\'s Lambda Function detecting a change in the PAX Prime ticket page \n\nProceed to http://prime.paxsite.com/registration to get your tickets. \n\nYou better hurry, these tickets sold out for Sat + Sun in 3 hours after being on sale.',
-            Subject='HOLY CRAP GO GET PAX TICKETS!!!')
+        PUBLISH_SNS = sns.publish(TopicArn=TOPIC_ARN,
+            Message= SNS_MESSAGE,
+            Subject=SNS_SUBJECT)
 
-        return publish_sns
+        return PUBLISH_SNS
 
     # to check if different
-    if len(pax_live()) == len(s3_get()):
+    if len(live_site()) == len(s3_get()):
         message = 'This has executed successfully, no changes found'
     else:
         sns_alert()
-	message= 'HOLY CRAP GO BUY TICKETS!!!'
+	message= 'SOMETHING CHANGED!!!'
 
     return message
